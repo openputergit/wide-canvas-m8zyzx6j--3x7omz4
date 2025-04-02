@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .drag-area {
+            border: 2px dashed #4B5563;
+            transition: all 0.3s ease;
+        }
+        .drag-area.active {
+            border: 2px solid #60A5FA;
+            background: #EFF6FF;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">AI Document Analysis System</h1>
+            
+            <!-- File Upload Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="drag-area p-8 rounded-lg text-center cursor-pointer">
+                    <i class="bi bi-cloud-upload text-4xl text-gray-600 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Drag & Drop Files</h3>
+                    <p class="text-gray-600 mb-4">or click to browse</p>
+                    <input type="file" id="fileInput" class="hidden" accept=".pptx,.xlsx,.pdf" multiple>
+                    <button class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
+                        Choose Files
+                    </button>
+                </div>
+                <div id="uploadedFiles" class="mt-4 space-y-2"></div>
+            </div>
+
+            <!-- Processing Options -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-semibold mb-4">Processing Options</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="useCase" class="mr-2" checked>
+                        <label for="useCase">Generate Use Case Template</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="rag" class="mr-2" checked>
+                        <label for="rag">Enable RAG Analysis</label>
+                    </div>
+                    <button id="processButton" class="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition" disabled>
+                        Process Documents
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="bg-white rounded-lg shadow-lg p-6 hidden">
+                <h3 class="text-xl font-semibold mb-4">Analysis Results</h3>
+                <div id="resultContent" class="prose max-w-none">
+                    <!-- Results will be populated here -->
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button id="downloadButton" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
+                        Download Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dragArea = document.querySelector('.drag-area');
+        const fileInput = document.querySelector('#fileInput');
+        const processButton = document.querySelector('#processButton');
+        const uploadedFiles = document.querySelector('#uploadedFiles');
+        const results = document.querySelector('#results');
+        const resultContent = document.querySelector('#resultContent');
+        
+        let files = [];
+
+        // Drag and Drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => {
+                dragArea.classList.add('active');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, () => {
+                dragArea.classList.remove('active');
+            });
+        });
+
+        dragArea.addEventListener('drop', handleDrop);
+        dragArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFiles);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const newFiles = [...dt.files];
+            handleFileSelection(newFiles);
+        }
+
+        function handleFiles(e) {
+            const newFiles = [...e.target.files];
+            handleFileSelection(newFiles);
+        }
+
+        function handleFileSelection(newFiles) {
+            files = [...files, ...newFiles.filter(file => 
+                file.name.endsWith('.xlsx') || 
+                file.name.endsWith('.pptx') || 
+                file.name.endsWith('.pdf')
+            )];
+            
+            displayFiles();
+            processButton.disabled = files.length === 0;
+        }
+
+        function displayFiles() {
+            uploadedFiles.innerHTML = files.map((file, index) => `
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <div class="flex items-center">
+                        <i class="bi bi-file-earmark text-gray-600 mr-2"></i>
+                        <span>${file.name}</span>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-red-500 hover:text-red-600">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            files.splice(index, 1);
+            displayFiles();
+            processButton.disabled = files.length === 0;
+        }
+
+        processButton.addEventListener('click', async () => {
+            try {
+                processButton.disabled = true;
+                processButton.innerHTML = '<i class="bi bi-spinner animate-spin mr-2"></i>Processing...';
+
+                // Simulated processing - replace with actual API calls
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                results.classList.remove('hidden');
+                resultContent.innerHTML = `
+                    <div class="space-y-4">
+                        <p class="font-semibold">Analysis Complete!</p>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <h4 class="font-semibold mb-2">Generated Use Cases:</h4>
+                            <ul class="list-disc pl-5">
+                                <li>User Authentication Flow</li>
+                                <li>Document Upload Process</li>
+                                <li>Analysis Pipeline</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded">
+                            <h4 class="font-semibold mb-2">RAG Analysis Results:</h4>
+                            <p>Key insights extracted from the documents...</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                alert('An error occurred during processing. Please try again.');
+            } finally {
+                processButton.disabled = false;
+                processButton.innerHTML = 'Process Documents';
+            }
+        });
+
+        document.querySelector('#downloadButton').addEventListener('click', () => {
+            // Simulated download - replace with actual download logic
+            alert('Download started! (Simulated)');
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
